@@ -3,6 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
 class Worker(QObject):
     finished = pyqtSignal(str)
+    failed = pyqtSignal(str)
     # progress = pyqtSignal(int)
 
     def __init__(self, fn):
@@ -11,11 +12,17 @@ class Worker(QObject):
 
 
     def run(self):
-        self.finished.emit(self.fn())
+        try:
+            out = self.fn()
+            self.finished.emit(self.fn())
+        except Exception as e:
+            print(e)
+            self.failed.emit(str(e))
+
 
 
 class ThreadFn(QThread):
-    def __init__(self, fn, started=[], finished=[]):
+    def __init__(self, fn, started=[], finished=[], failed=[]):
         super().__init__()
         self.thread = QThread()
         # Step 3: Create a worker object
@@ -26,6 +33,9 @@ class ThreadFn(QThread):
         # Step 5: Connect signals and slots
         for fn in started:
             self.thread.started.connect(fn)
+
+        for fn in failed:
+            self.worker.failed.connect(fn)
 
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)

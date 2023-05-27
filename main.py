@@ -5,7 +5,10 @@ import sys
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QLabel, QLineEdit, QGroupBox
 )
+from PyQt5.QtCore import Qt
+
 from qtpy import QtWidgets
+
 
 from algo import algos
 from collapsable import CollapsibleBox
@@ -14,6 +17,7 @@ from import_mesh import ImportMeshWidget
 from main_window import Ui_MainWindow
 from plotter import Mesh_Plotter
 from thread import ThreadFn
+from label import CustomLabel
 
 
 class Window(QMainWindow, Ui_MainWindow):
@@ -49,7 +53,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
         self.algoTree.addWidget(box)
 
-        #For algorithms
+        # For algorithms
         for algo in algos:
             box = CollapsibleBox(algo["name"])
             lay = QtWidgets.QVBoxLayout()
@@ -64,8 +68,10 @@ class Window(QMainWindow, Ui_MainWindow):
 
         vLayout = QtWidgets.QVBoxLayout()
 
-        for param in parameters:
-            formLayout.addRow(QLabel(param), QLineEdit())
+        for param, opts in parameters.items():
+            label = CustomLabel(param if opts.get("label") is None else opts["label"])
+            label.setData(param)
+            formLayout.addRow(label, QLineEdit(opts["default"]))
 
         generateBtn = QtWidgets.QPushButton("reconstruct")
 
@@ -100,7 +106,7 @@ class Window(QMainWindow, Ui_MainWindow):
         for i in range(form.rowCount() * 2):
             item = form.itemAt(i).widget()
             if i % 2 == 0:
-                label = item.text()
+                label = item.data()
             else:
                 if isinstance(item, QLineEdit):
                     data[label] = item.text()
@@ -108,6 +114,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
     def show_error(self, message):
         msg = QMessageBox()
+        msg.setTextFormat(Qt.RichText)
         msg.setIcon(QMessageBox.Critical)
         msg.setText("Error")
         msg.setInformativeText(message)
@@ -129,7 +136,8 @@ class Window(QMainWindow, Ui_MainWindow):
         else:
 
             thread = ThreadFn(lambda: recfn(input=self.file, output=self.tempFolder, **params),
-                              finished=[self.plotFile, lambda: self.workerThreads.remove(thread)])
+                              finished=[self.plotFile, lambda: self.workerThreads.remove(thread)],
+                              failed=[self.show_error])
             self.workerThreads.append(thread)
             thread.start()
 
