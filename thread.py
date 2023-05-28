@@ -14,7 +14,7 @@ class Worker(QObject):
     def run(self):
         try:
             out = self.fn()
-            self.finished.emit(self.fn())
+            self.finished.emit(out)
         except Exception as e:
             print(e)
             self.failed.emit(str(e))
