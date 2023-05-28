@@ -44,7 +44,8 @@ class Window(QMainWindow, Ui_MainWindow):
         box = CollapsibleBox("Open mesh")
         lay = QtWidgets.QVBoxLayout()
         importMeshWid = ImportMeshWidget()
-        importMeshWid.fileOpened.connect(lambda x: self.plotFile(x))
+
+        importMeshWid.fileOpened.connect(lambda x: self.createMeshTab()(x))
 
         lay.addWidget(importMeshWid)
         box.setContentLayout(lay)
@@ -132,14 +133,11 @@ class Window(QMainWindow, Ui_MainWindow):
         if self.file is None:
             self.show_error("no input file")
         else:
-            plotter = Mesh_Plotter()
-            self.addTab(plotter, "mesh1")
-            plotter.startLoader()
 
-            plot = lambda x: self.plotFile(plotter, x)
+            plotFn = self.createMeshTab()
 
             thread = ThreadFn(lambda: recfn(input=self.file, output=self.tempFolder, **params),
-                              finished=[plot, lambda: self.workerThreads.remove(thread)],
+                              finished=[plotFn, lambda: self.workerThreads.remove(thread)],
                               failed=[
                                   self.show_error,
                                   lambda: self.centralTabs.removeTab(self.centralTabs.indexOf(plotter))
@@ -147,13 +145,20 @@ class Window(QMainWindow, Ui_MainWindow):
             self.workerThreads.append(thread)
             thread.start()
 
-    def plotFile(self, plotter, fileName):
-        if fileName:
-            try:
-                plotter.stopLoader()
-                plotter.plot_file(fileName)
-            except ValueError:
-                self.show_error("unsupported file type")
+    def createMeshTab(self):
+        plotter = Mesh_Plotter()
+        plotter.startLoader()
+        plotter.readError.connect(self.show_error)
+        self.addTab(plotter, "mesh1")
+        return self.plotFileWrap(plotter)
+
+    def plotFileWrap(self, plotter):
+        def wrapped(file):
+            plotter.stopLoader()
+            plotter.plotFile(file)
+
+        return wrapped
+
 
     def initTempFolder(self):
         if os.path.exists(self.tempFolder):
