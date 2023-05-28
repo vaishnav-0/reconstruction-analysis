@@ -2,22 +2,20 @@ import glob
 import os
 import sys
 
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QLabel, QLineEdit, QGroupBox
-)
 from PyQt5.QtCore import Qt
-
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QLineEdit, QGroupBox
+)
 from qtpy import QtWidgets
-
 
 from algo import algos
 from collapsable import CollapsibleBox
 from detachable_tab import DetachableTabWidget
 from import_mesh import ImportMeshWidget
+from label import CustomLabel
 from main_window import Ui_MainWindow
 from plotter import Mesh_Plotter
 from thread import ThreadFn
-from label import CustomLabel
 
 
 class Window(QMainWindow, Ui_MainWindow):
@@ -134,19 +132,25 @@ class Window(QMainWindow, Ui_MainWindow):
         if self.file is None:
             self.show_error("no input file")
         else:
+            plotter = Mesh_Plotter()
+            self.addTab(plotter, "mesh1")
+            plotter.startLoader()
+
+            plot = lambda x: self.plotFile(plotter, x)
 
             thread = ThreadFn(lambda: recfn(input=self.file, output=self.tempFolder, **params),
-                              finished=[self.plotFile, lambda: self.workerThreads.remove(thread)],
-                              failed=[self.show_error])
+                              finished=[plot, lambda: self.workerThreads.remove(thread)],
+                              failed=[
+                                  self.show_error,
+                                  lambda: self.centralTabs.removeTab(self.centralTabs.indexOf(plotter))
+                              ])
             self.workerThreads.append(thread)
             thread.start()
 
-    def plotFile(self, fileName):
+    def plotFile(self, plotter, fileName):
         if fileName:
             try:
-                plotter = Mesh_Plotter()
-                self.addTab(plotter, "mesh1")
-
+                plotter.stopLoader()
                 plotter.plot_file(fileName)
             except ValueError:
                 self.show_error("unsupported file type")

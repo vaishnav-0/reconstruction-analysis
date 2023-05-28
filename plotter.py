@@ -4,6 +4,7 @@ import os
 from PyQt5.QtWidgets import QTabWidget
 
 from grip import Grip
+from loader import LoadingTranslucentScreen
 
 os.environ["QT_API"] = "pyqt5"
 
@@ -49,6 +50,7 @@ class Mesh_Plotter(QWidget):
         self.setLayout(self.VLayout)
         self.panel = Panel()
 
+        self.loader = LoadingTranslucentScreen(self, "loading")
         # layout
 
         self.VLayout.addWidget(self.plotter.interactor)
@@ -63,3 +65,9 @@ class Mesh_Plotter(QWidget):
         self.plotter.add_mesh(mesh, show_edges=True)
         _ = self.plotter.add_camera_orientation_widget()
         self.plotter.reset_camera()
+
+    def startLoader(self):
+        self.loader.start()
+
+    def stopLoader(self):
+        self.loader.stop()
