@@ -21,17 +21,21 @@ from thread import ThreadFn
 class Window(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
+        # set up temporary folder for storing generated mesh files
         self.tempFolder = "./temp"
-        self.setupUi(self)
         self.initTempFolder()
-        self.tabs = []
-        self.file = None
-        self.workerThreads = []
 
-        # mesh area
+        # selected point cloud file
+        self.file = None
+
+        self.workerThreads = []
+        self.setupUi(self)
+
+        # mesh area(right side)
         self.centralTabs = DetachableTabWidget()
         self.verticalLayout_meshView.addWidget(self.centralTabs)
 
+        # left side panel
         self.initAlgoTree()
 
     """
@@ -45,14 +49,14 @@ class Window(QMainWindow, Ui_MainWindow):
         lay = QtWidgets.QVBoxLayout()
         importMeshWid = ImportMeshWidget()
 
-        importMeshWid.fileOpened.connect(lambda x: self.createMeshTab()(x))
+        importMeshWid.fileOpened.connect(lambda x: self.createMeshTab()[0](x))
 
         lay.addWidget(importMeshWid)
         box.setContentLayout(lay)
 
         self.algoTree.addWidget(box)
 
-        # For algorithms
+        # drop down for each algorithm
         for algo in algos:
             box = CollapsibleBox(algo["name"])
             lay = QtWidgets.QVBoxLayout()
@@ -61,6 +65,7 @@ class Window(QMainWindow, Ui_MainWindow):
             box.setContentLayout(lay)
             self.algoTree.addWidget(box)
 
+    # generates form of each algorithm
     def createAlgoForm(self, parameters, recFn):
         formGroupBox = QGroupBox()
         formLayout = QFormLayout()
@@ -74,31 +79,18 @@ class Window(QMainWindow, Ui_MainWindow):
 
         generateBtn = QtWidgets.QPushButton("reconstruct")
 
-        # loader = WaitingSpinner(
-        #     formGroupBox,
-        #     roundness=98.0,
-        #     fade=79.0,
-        #     radius=10,
-        #     lines=17,
-        #     line_length=10,
-        #     line_width=2,
-        #     speed=0.7,
-        #     color=QColor(0, 0, 0)
-        # )
-
         generateBtn.clicked.connect(lambda: self.regenerate(recFn, self.getFormData(formLayout)))
 
         vLayout.addItem(formLayout)
         vLayout.addWidget(generateBtn)
-        # vLayout.addWidget(loader)
 
         formGroupBox.setLayout(vLayout)
         return formGroupBox
 
     def addTab(self, widget, label):
-        # self.tabs.append(widget)
         self.centralTabs.addTab(widget, label)
 
+    # extract data from a form of an algorithm
     def getFormData(self, form):
         data = {}
         label = ""
@@ -111,15 +103,17 @@ class Window(QMainWindow, Ui_MainWindow):
                     data[label] = item.text()
         return data
 
+    # display error message in a dialog
     def show_error(self, message):
         msg = QMessageBox()
-        msg.setTextFormat(Qt.RichText)
         msg.setIcon(QMessageBox.Critical)
         msg.setText("Error")
-        msg.setInformativeText(message)
+        # div added for rich text formatting
+        msg.setInformativeText("<div>" + message + "</div>")
         msg.setWindowTitle("Error")
         msg.exec_()
 
+    # open dialog to open a file
     def openFile(self):
         options = QFileDialog.Options()
         fileName, _ = QFileDialog.getOpenFileName(self, "select file", "", "All Files (*)",
@@ -129,12 +123,13 @@ class Window(QMainWindow, Ui_MainWindow):
 
         return fileName
 
+    # create mesh and open a tab to view it
     def regenerate(self, recfn, params):
         if self.file is None:
             self.show_error("no input file")
         else:
 
-            plotFn = self.createMeshTab()
+            plotFn, plotter = self.createMeshTab()
 
             thread = ThreadFn(lambda: recfn(input=self.file, output=self.tempFolder, **params),
                               finished=[plotFn, lambda: self.workerThreads.remove(thread)],
@@ -145,21 +140,26 @@ class Window(QMainWindow, Ui_MainWindow):
             self.workerThreads.append(thread)
             thread.start()
 
-    def createMeshTab(self):
+    def createMeshTab(self, tabTitle):
+        """
+        opens a mesh tab and initialize a loader
+        :return:
+            - function - function(str) to plot the mesh
+            - plotter added to the tab
+        """
         plotter = Mesh_Plotter()
         plotter.startLoader()
         plotter.readError.connect(self.show_error)
         self.addTab(plotter, "mesh1")
-        return self.plotFileWrap(plotter)
+        return self.plotFileWrap(plotter), plotter
 
     def plotFileWrap(self, plotter):
         def wrapped(file):
             plotter.stopLoader()
             plotter.plotFile(file)
-
         return wrapped
 
-
+    # creates or initialize temporary folder
     def initTempFolder(self):
         if os.path.exists(self.tempFolder):
             files = glob.glob(self.tempFolder + "/*")
