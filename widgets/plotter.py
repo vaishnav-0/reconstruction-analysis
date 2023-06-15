@@ -8,8 +8,8 @@ from PyQt5.QtWidgets import QTabWidget, QFileDialog, QPushButton, QLabel, QSpace
 from PyQt5 import QtCore
 
 from globals import global_font
-from grip import Grip
-from loader import LoadingTranslucentScreen
+from widgets.grip import Grip
+from widgets.loader import LoadingTranslucentScreen
 
 os.environ["QT_API"] = "pyqt5"
 
