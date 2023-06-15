@@ -2,20 +2,19 @@ import glob
 import os
 import sys
 
-from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QLineEdit, QGroupBox
 )
 from qtpy import QtWidgets
 
 from algo import algos
-from collapsable import CollapsibleBox
-from detachable_tab import DetachableTabWidget
+from widgets.collapsable import CollapsibleBox
+from widgets.detachable_tab import DetachableTabWidget
 from globals import global_font
-from import_mesh import ImportMeshWidget
-from label import CustomLabel
+from widgets.import_mesh import ImportMeshWidget
+from widgets.label import CustomLabel
 from main_window import Ui_MainWindow
-from plotter import Mesh_Plotter
+from widgets.plotter import Mesh_Plotter
 from thread import ThreadFn
 from utils import get_filename
 
