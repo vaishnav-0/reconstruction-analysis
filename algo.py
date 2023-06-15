@@ -5,8 +5,10 @@ from subprocess import Popen, PIPE, STDOUT
 import pymeshlab
 
 from utils import get_filename
+from config import srst_path
 
-srst_path = "../SRST-main/build/srst"
+if(not os.path.isfile(srst_path)):
+    raise Exception("srst binary doesn't exist")
 
 boolfn = lambda x: bool(int(x))
 meshPercent = lambda x: pymeshlab.Percentage(int(x))
@@ -110,10 +112,12 @@ def vcg(input, output, **options):
 
 
 """
+
+To add a new algorithm add entry of the following format to the below list 
 {
-    name: algorithm name,
-    parameters: {parameterName: {label, type}}
-    fn: The reconstruction algorithm which returns the filename of the reconstructed file
+    name: algorithm_name,
+    parameters: {parameterName: {label(visible in the gui), type(to be casted to), default(default value in the gui)}}
+    fn: The reconstruction algorithm which returns the filename of the reconstructed file - fn(input_file, output_dir, parameters)
 }
 """
 
