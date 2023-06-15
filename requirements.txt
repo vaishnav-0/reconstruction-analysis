@@ -12,6 +12,7 @@ packaging==23.1
 Pillow==9.5.0
 platformdirs==3.5.1
 pooch==1.7.0
+pymeshlab==2022.2.post4
 pyparsing==3.0.9
 PyQt5==5.15.9
 pyqt5-plugins==5.15.9.2.3
