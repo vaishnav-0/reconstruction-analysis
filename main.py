@@ -2,7 +2,7 @@ import glob
 import os
 import sys
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QMessageBox, QFormLayout, QLineEdit, QGroupBox
 )
@@ -11,16 +11,20 @@ from qtpy import QtWidgets
 from algo import algos
 from collapsable import CollapsibleBox
 from detachable_tab import DetachableTabWidget
+from globals import global_font
 from import_mesh import ImportMeshWidget
 from label import CustomLabel
 from main_window import Ui_MainWindow
 from plotter import Mesh_Plotter
 from thread import ThreadFn
+from utils import get_filename
+
 
 
 class Window(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
+
         # set up temporary folder for storing generated mesh files
         self.tempFolder = "./temp"
         self.initTempFolder()
@@ -49,7 +53,7 @@ class Window(QMainWindow, Ui_MainWindow):
         lay = QtWidgets.QVBoxLayout()
         importMeshWid = ImportMeshWidget()
 
-        importMeshWid.fileOpened.connect(lambda x: self.createMeshTab()[0](x))
+        importMeshWid.fileOpened.connect(lambda x: self.createMeshTab("mesh" + "_" + get_filename(x), "None", {})[0](x))
 
         lay.addWidget(importMeshWid)
         box.setContentLayout(lay)
@@ -60,7 +64,11 @@ class Window(QMainWindow, Ui_MainWindow):
         for algo in algos:
             box = CollapsibleBox(algo["name"])
             lay = QtWidgets.QVBoxLayout()
-            lay.addWidget(self.createAlgoForm(algo["parameters"], algo["fn"]))
+
+            def rec_fn_wrapper(x, _algo=algo):
+                self.regenerate(_algo, x)
+
+            lay.addWidget(self.createAlgoForm(algo["parameters"], rec_fn_wrapper))
 
             box.setContentLayout(lay)
             self.algoTree.addWidget(box)
@@ -79,7 +87,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
         generateBtn = QtWidgets.QPushButton("reconstruct")
 
-        generateBtn.clicked.connect(lambda: self.regenerate(recFn, self.getFormData(formLayout)))
+        generateBtn.clicked.connect(lambda: recFn(self.getFormData(formLayout)))
 
         vLayout.addItem(formLayout)
         vLayout.addWidget(generateBtn)
@@ -124,12 +132,15 @@ class Window(QMainWindow, Ui_MainWindow):
         return fileName
 
     # create mesh and open a tab to view it
-    def regenerate(self, recfn, params):
+    def regenerate(self, algo, params):
+
+        recfn = algo["fn"]
+        tab_title = algo["name"] + "_" + get_filename(self.file)
+
         if self.file is None:
             self.show_error("no input file")
         else:
-
-            plotFn, plotter = self.createMeshTab()
+            plotFn, plotter = self.createMeshTab(tab_title, algo["name"], params)
 
             thread = ThreadFn(lambda: recfn(input=self.file, output=self.tempFolder, **params),
                               finished=[plotFn, lambda: self.workerThreads.remove(thread)],
@@ -140,7 +151,7 @@ class Window(QMainWindow, Ui_MainWindow):
             self.workerThreads.append(thread)
             thread.start()
 
-    def createMeshTab(self, tabTitle):
+    def createMeshTab(self, tabTitle, algoName, params):
         """
         opens a mesh tab and initialize a loader
         :return:
@@ -149,14 +160,18 @@ class Window(QMainWindow, Ui_MainWindow):
         """
         plotter = Mesh_Plotter()
         plotter.startLoader()
+        plotter.add_info(algoName, params)
+        plotter.add_actions()
+        plotter.add_help()
         plotter.readError.connect(self.show_error)
-        self.addTab(plotter, "mesh1")
+        self.addTab(plotter, tabTitle)
         return self.plotFileWrap(plotter), plotter
 
     def plotFileWrap(self, plotter):
         def wrapped(file):
             plotter.stopLoader()
             plotter.plotFile(file)
+
         return wrapped
 
     # creates or initialize temporary folder
@@ -171,6 +186,7 @@ class Window(QMainWindow, Ui_MainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setFont(global_font)
     win = Window()
     win.show()
     sys.exit(app.exec())

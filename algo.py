@@ -4,6 +4,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 import pymeshlab
 
+from utils import get_filename
+
 srst_path = "../SRST-main/build/srst"
 
 boolfn = lambda x: bool(int(x))
@@ -18,7 +20,7 @@ def getTransformedOptions(options, params):
 
 
 def srstOutFn(input, output, **options):
-    file_name = input.split("/")[-1].split(".")[0]
+    file_name = get_filename(input)
     outName = os.path.join(output, file_name + str(time.time()) + ".stl")
     p = Popen([srst_path, input, outName], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
     stdout = p.communicate(input=options["parameter"].encode())[0]
@@ -37,7 +39,7 @@ def ball_pivoting(input, output, **options):
     params = next(filter(lambda x: x["name"] == "ball pivoting", algos), None)["parameters"]
     transformedOpts = getTransformedOptions(options, params)
 
-    file_name = input.split("/")[-1].split(".")[0]
+    file_name = get_filename(input)
     outName = os.path.join(output, file_name + str(time.time()) + ".stl")
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(input)
@@ -67,7 +69,7 @@ def screened_poisson(input, output, **options):
     params = next(filter(lambda x: x["name"] == "screened poisson", algos), None)["parameters"]
     transformedOpts = getTransformedOptions(options, params)
 
-    file_name = input.split("/")[-1].split(".")[0]
+    file_name = get_filename(input)
     outName = os.path.join(output, file_name + str(time.time()) + ".stl")
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(input)
@@ -96,7 +98,7 @@ def vcg(input, output, **options):
     params = next(filter(lambda x: x["name"] == "vcg", algos), None)["parameters"]
     transformedOpts = getTransformedOptions(options, params)
 
-    file_name = input.split("/")[-1].split(".")[0]
+    file_name = get_filename(input)
     outName = os.path.join(output, file_name + str(time.time()) + ".stl")
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(input)
